@@ -6,8 +6,8 @@ using namespace std;
 
 long double function(double arr[3])
 {
-    /*return pow(arr[0]-3*9801.127, 2) + pow(arr[1]+17.47, 2) + pow(arr[2]+1.013, 2);*/
-    return pow(arr[2], 3) - pow(arr[0], 2) + 3 * pow(arr[1], 2) - 1.5 * pow(arr[2], 2) - 4 * arr[0] + 6 * arr[1] + 2;
+    return pow(arr[0]-81.127, 2) + pow(arr[1]+61.47, 2) + pow(arr[2]-731.07, 2);
+    /*return pow(arr[2], 3) - pow(arr[0], 2) + 3 * pow(arr[1], 2) - 1.5 * pow(arr[2], 2) - 4 * arr[0] + 6 * arr[1] + 2;*/
 }
 
 double random()
@@ -36,51 +36,70 @@ void sorted(long double* arr0, double arr1[][3], int LEN, int k = 1)
     }
 }
 
-void crossing(double arr[][3], int k[3], int k_parence, double sum, int p, int LEN)
+void crossing(double arr[][3], int k[3], int k_parence, int p, int LEN, int q = 1)
 {
-    if (rand()%2) {
-        for (int u = 0; u < 3; u++)
-            for (int i = 0; i < k_parence; i++)
-                for (int j = i + 1; j < k_parence; j++)
+    if (0) {
+        for (int u = 0; u < 3; u++) {
+            for (int i = 0; i < k_parence; i++) {
+                for (int j = i + 1; j < k_parence; j++) {
                     if (p >= rand() % 100 + 1) {
                         double a = -0.25 + (double)(rand() % 125) / 100.0;
                         /*arr[k[u]][u] = (arr[i][u] + arr[j][u]) / 2;*/
                         arr[k[u]][u] = arr[i][u] + a * (arr[j][u] - arr[i][u]);  // Промежуточная рекомбинация (Intermediate recombination)
                         k[u]--;
                     }
+                }
+            }
+        }
     } else {
-        int cstop = 20;
-        for (int i = 0; i < LEN && (cstop>0); i++)
-            if (rand() % 100 <= 100 * (function(arr[i]) / sum))
-                for (int j = i + 1; j < LEN && (cstop>0); j++)
-                    if (rand() % 100 <= 100 * (function(arr[i]) / sum))
-                        for (int u = 0; u < 3; u++) {
-                            arr[i][u] = arr[(rand() % 3) ? i : j][u];
-                            cstop--;
-                            k[u]--;
-                        }
-
+        int cstop = 30;
+        double *a[2];
+        for (int i = 0; i < LEN && (cstop > 0); i++) {
+            for (int j = i + 1; j < LEN && (cstop > 0); j++) {
+                for (int e = 0; e < 2; e++) {  // элитарный выбор
+                    double *b, *c;
+                    b = arr[rand() % LEN];
+                    c = arr[rand() % LEN];
+                    if (q * function(c) < q * function(b))
+                        a[e] = b;
+                    else
+                        a[e] = c;
+                }
+                for (int u = 0; u < 3; u++) {
+                    arr[k[u]][u] = a[(rand() % 2)][u];
+                    k[u]--;
+                }
+                cstop--;
+            }
+        }
     }
 }
 
-void mutation(double arr[][3], int k[3], int k_parence, double eps, int p)
+void mutation(double arr[][3], int k[3], int k_parence, int p)
 {
-    if (rand()%2) {
+    for (int i = 0; i < k_parence; i++)  // Real valued mutation
+        if (rand() % 2) {
+            double eps = pow(10, -2 + rand() % 4);
+            for (int j = 0; j < 3; j++) {
+                arr[k[j]][j] = arr[i][j] + eps;
+                k[j]--;
+                arr[k[j]][j] = arr[i][j] - eps;
+                k[j]--;
+                if (k[j] == 0)
+                    return;
+            }
+        }
+        else {
             for (int i = 0; i < k_parence; i++)  // Real valued mutation
-                for (int j = 0; j < 3; j++) {
-                    arr[k[j]][j] = arr[i][j] + eps;
-                    k[j]--;
-                    arr[k[j]][j] = arr[i][j] - eps;
-                    k[j]--;
-                }
-    } else {
-        for (int i = 0; i < k_parence; i++)  // Real valued mutation
-            for (int u = 0; u < 3; u++)
-                if (rand() % 100 <= 10) {
+                for (int u = 0; u < 3; u++) {
                     arr[k[u]][u] = arr[i][u];
+                    if (rand() % 100 <= p)
+                        arr[k[u]][u] = random();
                     k[u]--;
+                    if (k[u] == 0)
+                        return;
                 }
-    }
+        }
     for (int j = 0; j < 3; j++) {
         if (p >= rand() % 100 + 1)
             for (int i = k_parence; i <= k[j]; i++)
@@ -115,17 +134,15 @@ int main() // функция номер 20
 {
     setlocale(LC_ALL, "rus");
 
-    double eps = 1e-2;
-    double probability_m = 30, probability_c = 80;
+    /*double eps = 0.1;*/
+    double probability_m = 60, probability_c = 80;
     const int LEN = 100;
     int k_parence = 10, iter = 0;
-    double sum_max = 0, sum_min = 0;
     int k_individuals_max[3], k_individuals_min[3];
 
     /*cout << "Введите точность: " << endl;
     cin >> eps;*/
 
-    int k_gaps = 0;
     double population_max[LEN][3], population_min[LEN][3];
     long double func_min[LEN], func_max[LEN];
 
@@ -134,9 +151,7 @@ int main() // функция номер 20
             population_max[i][j] = random();
             population_min[i][j] = random();
             func_max[i] = function(population_max[i]);
-            sum_max = func_max[i];
             func_min[i] = function(population_min[i]);  // Вычисление значения функции
-            sum_min = func_min[i];
         }
     }
     sorted(func_max, population_max, LEN, -1);
@@ -148,24 +163,20 @@ int main() // функция номер 20
         k_individuals_min[0] = k_individuals_min[1] = k_individuals_min[2] = LEN - 1;
         iter++;
 
-        crossing(population_max, k_individuals_max, k_parence, sum_max, probability_c, LEN);   // Нахождение следующего поколения (среднее арифметическое)
-        mutation(population_max, k_individuals_max, k_parence, eps, probability_m);  // Нахождение окрестности + Заполнение остатка массива случайными числами
+        crossing(population_max, k_individuals_max, k_parence, probability_c, LEN);   // Нахождение следующего поколения (среднее арифметическое)
+        mutation(population_max, k_individuals_max, k_parence, probability_m);  // Нахождение окрестности + Заполнение остатка массива случайными числами
 
-        crossing(population_min, k_individuals_min, k_parence, sum_min, probability_c, LEN);
-        mutation(population_min, k_individuals_min, k_parence, eps, probability_m);
+        crossing(population_min, k_individuals_min, k_parence, probability_c, LEN, -1);
+        mutation(population_min, k_individuals_min, k_parence, probability_m);
 
-        sum_max = 0;
-        sum_min = 0;
         for (int i = 0; i < LEN; i++) {
             func_max[i] = function(population_max[i]);
-            sum_max = func_max[i];
             func_min[i] = function(population_min[i]);
-            sum_min = func_min[i];
         }
         sorted(func_max, population_max, LEN, -1);
         sorted(func_min, population_min, LEN);
 
-    } while (iter < 10000);
+    } while (iter < 2000);
     cout << iter << " Iterations" << endl;
 
     cout << "Максимум: " << endl;
