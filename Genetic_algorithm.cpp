@@ -6,13 +6,13 @@ using namespace std;
 
 long double function(double arr[3])
 {
-    return pow(arr[0]-81.127, 2) + pow(arr[1]+61.47, 2) + pow(arr[2]-731.07, 2);
-    /*return pow(arr[2], 3) - pow(arr[0], 2) + 3 * pow(arr[1], 2) - 1.5 * pow(arr[2], 2) - 4 * arr[0] + 6 * arr[1] + 2;*/
+    return 11/(1+pow(arr[0]-858.04, 2)) + 1/(1+pow(arr[1]+180.47, 2)) + 1/(1+pow(arr[2]+153.887, 2));
+    return pow(arr[2], 3) - pow(arr[0], 2) + 3 * pow(arr[1], 2) - 1.5 * pow(arr[2], 2) - 4 * arr[0] + 6 * arr[1] + 2;
 }
 
 double random()
 {
-    int n = 5;
+    int n = 4;
     /*return rand() % (int)pow(10, rand() % 4 + 1);*/
     return (double)((int)pow(rand(), 2) % (int)pow(10, (rand() % n + 1))) * (pow(10, -(n - 1) + (rand() % (n - 1) + 1)));
 
@@ -26,7 +26,7 @@ void sorted(long double* arr0, double arr1[][3], int LEN, int k = 1)
         k = -1;
     for (int i = 0; i < LEN - 1; i++) {
         for (int j = i + 1; j < LEN; j++) {
-            if (k * arr0[i] > k * arr0[j]) {
+            if (k * arr0[i] < k * arr0[j]) {
                 swap(arr0[i], arr0[j]);
                 swap(arr1[i][0], arr1[j][0]);
                 swap(arr1[i][1], arr1[j][1]);
@@ -52,11 +52,11 @@ void crossing(double arr[][3], int k[3], int k_parence, int p, int LEN, int q = 
             }
         }
     } else {
-        int cstop = 30;
+        int cstop = 10;
         double *a[2];
         for (int i = 0; i < LEN && (cstop > 0); i++) {
             for (int j = i + 1; j < LEN && (cstop > 0); j++) {
-                for (int e = 0; e < 2; e++) {  // элитарный выбор
+                for (int e = 0; e < 2; e++) {  // турнирный выбор родителей
                     double *b, *c;
                     b = arr[rand() % LEN];
                     c = arr[rand() % LEN];
@@ -66,6 +66,8 @@ void crossing(double arr[][3], int k[3], int k_parence, int p, int LEN, int q = 
                         a[e] = c;
                 }
                 for (int u = 0; u < 3; u++) {
+                    arr[k[u]][u] = a[(rand() % 2)][u];  // дискретная рекомбинация (Discrete recombination)
+                    k[u]--;
                     arr[k[u]][u] = a[(rand() % 2)][u];
                     k[u]--;
                 }
@@ -85,25 +87,30 @@ void mutation(double arr[][3], int k[3], int k_parence, int p)
                 k[j]--;
                 arr[k[j]][j] = arr[i][j] - eps;
                 k[j]--;
-                if (k[j] == 0)
+                if (k[j] <= 10)
                     return;
             }
         }
         else {
-            for (int i = 0; i < k_parence; i++)  // Real valued mutation
+            for (int i = 0; i < k_parence; i++) {
                 for (int u = 0; u < 3; u++) {
                     arr[k[u]][u] = arr[i][u];
-                    if (rand() % 100 <= p)
+                    if (rand() % 100 + 1 <= p)
                         arr[k[u]][u] = random();
                     k[u]--;
-                    if (k[u] == 0)
+                    if (k[u] <= 10)
                         return;
                 }
+            }
         }
-    for (int j = 0; j < 3; j++) {
-        if (p >= rand() % 100 + 1)
-            for (int i = k_parence; i <= k[j]; i++)
-                arr[i][j] = random();
+    for (int u = 0; u < 3; u++) {
+        for (int i = k_parence; i <= k[u]; i++) {
+            if (p >= rand() % 100 + 1) {
+                for (int j = 0; j < 3; j++) {
+                    arr[i][j] = random();
+                }
+            }
+        }
     }
 }
 
@@ -150,18 +157,18 @@ int main() // функция номер 20
         for (int j = 0; j < 3; j++) {
             population_max[i][j] = random();
             population_min[i][j] = random();
-            func_max[i] = function(population_max[i]);
-            func_min[i] = function(population_min[i]);  // Вычисление значения функции
         }
+        func_max[i] = function(population_max[i]);
+        func_min[i] = function(population_min[i]);  // Вычисление значения функции
     }
-    sorted(func_max, population_max, LEN, -1);
-    sorted(func_min, population_min, LEN);  // Сортировка массивов по значениям функции
+    sorted(func_max, population_max, LEN);
+    sorted(func_min, population_min, LEN, -1);  // Сортировка массивов по значениям функции
     
     do
     {
+        iter++;
         k_individuals_max[0] = k_individuals_max[1] = k_individuals_max[2] = LEN - 1;
         k_individuals_min[0] = k_individuals_min[1] = k_individuals_min[2] = LEN - 1;
-        iter++;
 
         crossing(population_max, k_individuals_max, k_parence, probability_c, LEN);   // Нахождение следующего поколения (среднее арифметическое)
         mutation(population_max, k_individuals_max, k_parence, probability_m);  // Нахождение окрестности + Заполнение остатка массива случайными числами
@@ -171,14 +178,23 @@ int main() // функция номер 20
 
         for (int i = 0; i < LEN; i++) {
             func_max[i] = function(population_max[i]);
+            while (isnan(func_max[i]) || isinf(func_max[i])) {
+                for (int j = 0; j < 3; j++)
+                    population_max[i][j] = random();
+                func_max[i] = function(population_max[i]);
+            }
             func_min[i] = function(population_min[i]);
+            while (isnan(func_min[i]) || isinf(func_min[i])) {
+                for (int j = 0; j < 3; j++)
+                    population_min[i][j] = random();
+                func_min[i] = function(population_min[i]);
+            }
         }
-        sorted(func_max, population_max, LEN, -1);
-        sorted(func_min, population_min, LEN);
-
-    } while (iter < 2000);
+        sorted(func_max, population_max, LEN);
+        sorted(func_min, population_min, LEN, -1);
+    } while (iter < 1000);
     cout << iter << " Iterations" << endl;
-
+    
     cout << "Максимум: " << endl;
     cout << "f(x, y, z) = " << func_max[0] << endl;
     cout << population_max[0][0] << " " << population_max[0][1] << " " << population_max[0][2] << endl;
