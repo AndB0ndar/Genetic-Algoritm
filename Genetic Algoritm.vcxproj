@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CHERN.cpp" />
     <ClCompile Include="Genetic_algorithm.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
